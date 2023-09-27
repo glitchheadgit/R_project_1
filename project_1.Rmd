@@ -1,1 +1,103 @@
+---
+title: "Project: "
+author: "Michil Trofimov"
+date: "2023-01-16"
+#bibliography: packages.bib
+output: 
+  html_document:
+    latex_engine : xelatex
+    df_print: default
+    highlight: zenburn
+    toc: TRUE
+    toc_depth: 3
+mainfont : NanumGothic    
+editor_options: 
+  markdown: 
+    wrap: 72
+---
 
+Libraries that we have used. Data.table, dlookr, flextable were not reviewed in our lecture.
+
+```{r setup, message=FALSE}
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(dlookr)
+library(flextable)
+```
+
+```{r upload data, include=FALSE}
+setwd('/Users/m.trofimov/Dropbox/Study/BI/R_statistics/R_project_1/data')
+df = fread('day.csv', na.strings = c('',NA))
+```
+
+Let's look at our data with a function `diagnose` from a package
+*dlookr*
+
+```{r, echo=FALSE}
+diagnose(df) %>% flextable()
+```
+
+There are missing values in columns temp, hum, windspeed and registered.
+Considering that each value corresponds to a day of a year, we would not
+like to drop rows with missing values.
+
+Let's fill missing values:
+
+-   temp: we will take values from column atemp
+-   hum: we will fill with an average value of humidity in a
+    corresponding month
+-   windspeed: the same as hum
+-   registered: we find value by counting cnt - casual
+
+```{r fill_na, include=FALSE}
+df = df %>% mutate(temp = coalesce(temp,atemp))
+                   
+mean_hum_windspeed = data.frame(df %>% group_by(mnth) %>% summarise(mean_hum = mean(hum, na.rm = T),
+                                    mean_windspeed = mean(windspeed, na.rm = T)))
+
+df_clean = df %>% mutate(
+  hum = ifelse(
+  (is.na(hum) & (mnth == 1)), mean_hum_windspeed[mean_hum_windspeed$mnth == 1,]$mean_hum, 
+  ifelse(
+    (is.na(hum) & (mnth == 6)), mean_hum_windspeed[mean_hum_windspeed$mnth == 6,]$mean_hum,
+  ifelse(
+    (is.na(hum) & (mnth == 12)), mean_hum_windspeed[mean_hum_windspeed$mnth == 12,]$mean_hum, as.double(hum)))),
+  
+  windspeed = ifelse(
+  (is.na(windspeed) & (mnth == 11)), mean_hum_windspeed[mean_hum_windspeed$mnth == 11,]$mean_windspeed, 
+  as.double(windspeed)),
+  
+  registered = ifelse(
+    is.na(registered), 1985-186, as.double(registered)
+  ))
+
+```
+
+```{r categorise variables, include=FALSE}
+df_clean$mnth = as.factor(df_clean$mnth)
+df_clean$season = as.factor(df_clean$season)
+df_clean$yr = as.factor(df_clean$yr)
+df_clean$holiday = as.factor(df_clean$holiday)
+df_clean$weekday = as.factor(df_clean$weekday)
+df_clean$workingday = as.factor(df_clean$workingday)
+df_clean$weathersit = as.factor(df_clean$weathersit)
+```
+
+Now we need to find outliers
+
+
+```{r, echo=FALSE}
+diagnose_outlier(df_clean) %>% flextable()
+```
+
+```{r, include=FALSE}
+find_outliers(df_clean, index = F)
+```
+```{r, echo=FALSE}
+df_clean %>%
+  select(hum, windspeed) %>%
+  plot_outlier
+```
+
+There is a weird outlier for humidity with value 0
