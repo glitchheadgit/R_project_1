@@ -1,6 +1,6 @@
 ---
 title: "Project: "
-author: "Michil Trofimov"
+author: "Michil Trofimov, Vlada Tuliavko, Ustin Zolotikov"
 date: "2023-01-16"
 #bibliography: packages.bib
 output: 
@@ -15,6 +15,8 @@ editor_options:
   markdown: 
     wrap: 72
 ---
+
+## Dependencies
 
 Libraries that we have used. Data.table, dlookr, flextable were not reviewed in our lecture.
 
@@ -31,12 +33,16 @@ setwd('/Users/m.trofimov/Dropbox/Study/BI/R_statistics/R_project_1/data')
 df = fread('day.csv', na.strings = c('',NA))
 ```
 
+## Pre-process
+
 Let's look at our data with a function `diagnose` from a package
 *dlookr*
 
 ```{r, echo=FALSE}
 diagnose(df) %>% flextable()
 ```
+
+We need to factories data related to the date (season, yr, mnth, holiday, weekday, workingday) and variable weathersit (type of weather).
 
 There are missing values in columns temp, hum, windspeed and registered.
 Considering that each value corresponds to a day of a year, we would not
@@ -100,4 +106,91 @@ df_clean %>%
   plot_outlier
 ```
 
-There is a weird outlier for humidity with value 0
+There is a weird outlier for humidity with value 0. Remove it.
+
+```{r, include=FALSE}
+df_clean = df_clean %>%
+  filter(hum != 0)
+```
+
+
+
+## Correlation plot
+
+```{r, message=FALSE}
+df_clean %>%
+  correlate() %>%
+  plot()
+```
+## Statistical analysis
+
+### Linear regression
+
+It would be interesting to check correlation between temp and number of users.
+
+```{r}
+plot(df_clean$temp, df_clean$cnt)
+```
+
+Does not look obvious. Let's fit linear regression number of users ~ temperature
+
+```{r}
+cnt_temp_lm_fit = lm(cnt ~ temp, df_clean)
+plot(cnt_temp_lm_fit)
+```
+
+- Data is heteroscedastic, due to the fact that at small and large values residuals begin to deviate from 0.
+
+- From q-q plot, we can see that residuals are normally distributed
+
+
+```{r}
+summary(cnt_temp_lm_fit)
+```
+There is very significant p-value < 2e-16, which indicates that there is a linear relationship between response variable (number of users) and predict variable (temperature)
+
+### T-test
+
+It would be interesting to see, whether day is a holiday or not influeneces number of users
+
+```{r}
+holiday_no = df_clean %>%
+  filter(holiday == "0")
+
+holiday_yes = df_clean %>%
+  filter(holiday == "1")
+
+t.test(holiday_no$cnt, holiday_yes$cnt)
+```
+
+There is no significant association (p-value > 0.05) between holiday and number of users.
+
+Perhaps, the problem is in the size of samples. We have only 21 holiday days.
+
+Let's check whether its a working day or not, influence number of users.
+
+```{r}
+weekdays = df_clean %>%
+  filter(workingday == "1")
+
+weekends = df_clean %>%
+  filter(workingday == "0")
+
+t.test(weekdays$cnt, weekends$cnt)
+```
+
+There is no significant association (p-value > 0.05) between holiday and number of users.
+
+Let's look at number of unregistered users
+
+```{r}
+weekdays = df_clean %>%
+  filter(workingday == "1")
+
+weekends = df_clean %>%
+  filter(workingday == "0")
+
+t.test(weekdays$casual, weekends$casual)
+```
+
+Yes, there is significant association between working day or not and number of casual users
