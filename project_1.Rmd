@@ -128,13 +128,13 @@ df_clean %>%
 
 It would be interesting to check correlation between temp and number of users.
 
-```{r}
+```{r, echo=FALSE}
 plot(df_clean$temp, df_clean$cnt)
 ```
 
 Does not look obvious. Let's fit linear regression number of users ~ temperature
 
-```{r}
+```{r, echo=FALSE}
 cnt_temp_lm_fit = lm(cnt ~ temp, df_clean)
 plot(cnt_temp_lm_fit)
 ```
@@ -144,7 +144,7 @@ plot(cnt_temp_lm_fit)
 - From q-q plot, we can see that residuals are normally distributed
 
 
-```{r}
+```{r, echo=FALSE}
 summary(cnt_temp_lm_fit)
 ```
 There is very significant p-value < 2e-16, which indicates that there is a linear relationship between response variable (number of users) and predict variable (temperature)
@@ -153,7 +153,7 @@ There is very significant p-value < 2e-16, which indicates that there is a linea
 
 It would be interesting to see, whether day is a holiday or not influeneces number of users
 
-```{r}
+```{r, echo=FALSE}
 holiday_no = df_clean %>%
   filter(holiday == "0")
 
@@ -169,7 +169,7 @@ Perhaps, the problem is in the size of samples. We have only 21 holiday days.
 
 Let's check whether its a working day or not, influence number of users.
 
-```{r}
+```{r, echo=FALSE}
 weekdays = df_clean %>%
   filter(workingday == "1")
 
@@ -183,7 +183,7 @@ There is no significant association (p-value > 0.05) between holiday and number 
 
 Let's look at number of unregistered users
 
-```{r}
+```{r, echo=FALSE}
 weekdays = df_clean %>%
   filter(workingday == "1")
 
@@ -194,3 +194,11 @@ t.test(weekdays$casual, weekends$casual)
 ```
 
 Yes, there is significant association between working day or not and number of casual users
+
+### Chi-squared
+
+```{r, echo=FALSE}
+chisq.test(table(df_clean$weathersit, df_clean$mnth))
+```
+
+P-value < 0.05, however, results may be inaccurate. Becase, expected frequencies for weathersit == 3 are less than 5.
